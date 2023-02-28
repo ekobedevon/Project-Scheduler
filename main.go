@@ -161,7 +161,7 @@ func SJFPrioritySchedule(w io.Writer, title string, processes []Process) {
 	var time, start int64 = 0, 0 // used to keep track of the current time
 	current := 0                 // keep track of current process being handled
 
-	for !CheckIfDone(pd) && time < 25 { // while all processes are not finished
+	for !CheckIfDone(pd){ // while all processes are not finished
 		swapped := false
 		for index, proc := range pd { // at the start of the each cycle
 			if TempProcesses[index].ArrivalTime < time { // if process has arrived
@@ -245,7 +245,7 @@ func SJFSchedule(w io.Writer, title string, processes []Process) {
 	var time, start int64 = 0, 0 // used to keep track of the current time
 	current := 0                 // keep track of current process being handled
 
-	for !CheckIfDone(pd) && time < 25 { // while all processes are not finished
+	for !CheckIfDone(pd) { // while all processes are not finished
 		swapped := false
 		for index, proc := range pd { // at the start of the each cycle
 			if TempProcesses[index].ArrivalTime < time { // if process has arrived
