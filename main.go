@@ -34,7 +34,7 @@ func main() {
 	//
 	SJFPrioritySchedule(os.Stdout, "Priority", processes)
 	//
-	//RRSchedule(os.Stdout, "Round-robin", processes)
+	RRSchedule(os.Stdout, "Round-robin", processes)
 }
 
 func openProcessingFile(args ...string) (*os.File, func(), error) {
@@ -161,7 +161,7 @@ func SJFPrioritySchedule(w io.Writer, title string, processes []Process) {
 	var time, start int64 = 0, 0 // used to keep track of the current time
 	current := 0                 // keep track of current process being handled
 
-	for !CheckIfDone(pd){ // while all processes are not finished
+	for !CheckIfDone(pd) { // while all processes are not finished
 		swapped := false
 		for index, proc := range pd { // at the start of the each cycle
 			if TempProcesses[index].ArrivalTime < time { // if process has arrived
@@ -180,9 +180,9 @@ func SJFPrioritySchedule(w io.Writer, title string, processes []Process) {
 		for index, proc := range processes {
 			if pd[index].ExitTime == 0 && proc.ArrivalTime <= time { // if the process is not already finished, and it has arrived
 				// if the process at the index has a shorter burst time than the currently running one, or the current is finished, or there is a tie and the new process has a higher priortiy
-				if 	TempProcesses[index].BurstDuration < TempProcesses[current].BurstDuration || // if the process has a shorter burst duration than the current one
-					TempProcesses[current].BurstDuration < 1  || // if the current task is finished
-					(TempProcesses[index].BurstDuration == TempProcesses[current].BurstDuration && TempProcesses[index].Priority > TempProcesses[current].Priority){ //if the process have equal duration left, use priority as a tie breaker
+				if TempProcesses[index].BurstDuration < TempProcesses[current].BurstDuration || // if the process has a shorter burst duration than the current one
+					TempProcesses[current].BurstDuration < 1 || // if the current task is finished
+					(TempProcesses[index].BurstDuration <= TempProcesses[current].BurstDuration && TempProcesses[index].Priority > TempProcesses[current].Priority) { //if the process have equal duration left, use priority as a tie breaker
 					new = index
 					swapped = true
 				}
@@ -225,6 +225,8 @@ func SJFPrioritySchedule(w io.Writer, title string, processes []Process) {
 	outputSchedule(w, schedule, aveWait, aveTurnaround, aveThroughput)
 
 }
+
+
 
 func SJFSchedule(w io.Writer, title string, processes []Process) {
 	var (
@@ -254,6 +256,7 @@ func SJFSchedule(w io.Writer, title string, processes []Process) {
 				} else if index == current { // if the process is currently being worked on
 					TempProcesses[index].BurstDuration--
 					if TempProcesses[index].BurstDuration == 0 {
+						fmt.Printf("%d finished: Swapped Triggered\n",index+1)
 						swapped = true
 						pd[index].ExitTime = time
 					}
@@ -262,12 +265,40 @@ func SJFSchedule(w io.Writer, title string, processes []Process) {
 		}
 		new := 0
 		for index, proc := range processes {
-			if pd[index].ExitTime == 0 && proc.ArrivalTime <= time { // if the process is not already finished, and it has arrived
-				if TempProcesses[index].BurstDuration < TempProcesses[current].BurstDuration || TempProcesses[current].BurstDuration < 1 { // if the process at the index has a shorter burst time than the currently running one, or the current is finished
+			if(proc.ArrivalTime >= time && pd[index].ExitTime == 0){ 
+				if(pd[new].ExitTime != 0){
 					new = index
 					swapped = true
+				} else if(TempProcesses[index].BurstDuration < TempProcesses[new].BurstDuration){
+					new = index
+				swapped = true
 				}
+				
 			}
+
+
+			// if pd[index].ExitTime == 0 && proc.ArrivalTime <= time { // if the process is not already finished, and it has arrived
+			// 	if TempProcesses[index].BurstDuration < TempProcesses[current].BurstDuration || TempProcesses[current].BurstDuration < 1 { // if the process at the index has a shorter burst time than the currently running one, or the current is finished
+			// 		if(swapped || index == new){
+			// 			if(TempProcesses[index].BurstDuration < TempProcesses[new].BurstDuration && TempProcesses[index].BurstDuration > 0){
+						
+			// 				fmt.Printf("%d going to %d\n",new+1,index+1)
+			// 				new = index
+			// 			}
+			// 		}else	{
+			// 			fmt.Printf("%d direct going to %d\n",new+1,index+1)
+			// 			new = index
+			// 		swapped = true
+			// 		}
+			// 		// 	fmt.Printf("%d new going to %d\n",new+1,index+1)
+			// 		// 	new = index
+			// 		// swapped = true
+			// 		// }
+
+			// 		new = index
+			// 		swapped = true
+			// 	}
+			// }
 		}
 		if swapped { // if the current process has lost priority or the last one is done
 			gantt = append(gantt, TimeSlice{ // place previous process in gantt table before switching processes
@@ -275,6 +306,7 @@ func SJFSchedule(w io.Writer, title string, processes []Process) {
 				Start: start,
 				Stop:  time,
 			})
+			fmt.Printf("%d slice to %d\n",current+1,new+1)
 			current = new // set the the process to be currently working
 			start = time  // set the time
 		}
@@ -307,7 +339,104 @@ func SJFSchedule(w io.Writer, title string, processes []Process) {
 
 }
 
-//func RRSchedule(w io.Writer, title string, processes []Process) { }
+func getNextProcess(pd []ProcessData, proc []Process, current int, time int64) int {
+	counter, max := 0, len(proc) // intiate variables
+	current++
+	if current >= max {
+		current = 0
+	}
+
+	for counter < max {
+		if pd[current].ExitTime == 0 && proc[current].ArrivalTime <= time { // if the process isn't done and has arrived
+			return current
+		} else {
+			if current < (max - 1) { // increment to next one
+				current++
+			} else {
+				current = 0
+			}
+			counter++
+		}
+	}
+	return -1 // if all jobs are done
+
+}
+
+func RRSchedule(w io.Writer, title string, processes []Process) {
+
+	var (
+		totalWait       float64
+		totalTurnaround float64
+		schedule        = make([][]string, len(processes))
+		gantt           = make([]TimeSlice, 0)
+	)
+	quantum := 0
+
+	TempProcesses := make([]Process, len(processes)) // make new array to manipulate without affecting parent
+	copy(TempProcesses, processes)
+
+	pd := make([]ProcessData, len(TempProcesses)) // new array to keep track of process data
+	for i := range pd {
+		pd[i] = ProcessData{TotalWait: 0, TAround: 0, ExitTime: 0}
+	}
+
+	var time, start int64 = 0, 0                      // used to keep track of the current time
+	current := getNextProcess(pd, processes, 0, time) // keep track of current process being handled
+	for current > -1 {
+		for index, proc := range pd { // at the start of the each cycle
+			if TempProcesses[index].ArrivalTime < time { // if process has arrived
+				if index != current && proc.ExitTime == 0 { // if it is not currently being worked
+					pd[index].TotalWait += 1 //increase wait time by one
+				} else if index == current { // if the process is currently being worked on
+					TempProcesses[index].BurstDuration--
+					if TempProcesses[index].BurstDuration == 0 {
+						pd[index].ExitTime = time
+					}
+				}
+			}
+		}
+
+		if quantum < 2 && pd[current].ExitTime == 0 { // if under the time quantum(2) and has not finished
+			quantum++
+		} else {
+			quantum = 1
+			next := getNextProcess(pd, processes, current, time) // get the next index in the round robin
+			if next != current {                                 // if the new pid is not the same as the current update gantt
+				gantt = append(gantt, TimeSlice{
+					PID:   processes[current].ProcessID,
+					Start: start,
+					Stop:  time,
+				})
+				start = time
+				current = next
+			}
+		}
+		time++
+	}
+
+	for i, proc := range pd {
+		schedule[i] = []string{
+			fmt.Sprint(processes[i].ProcessID),
+			fmt.Sprint(processes[i].Priority),
+			fmt.Sprint(processes[i].BurstDuration),
+			fmt.Sprint(processes[i].ArrivalTime),
+			fmt.Sprint(proc.TotalWait),
+			fmt.Sprint(proc.TotalWait + processes[i].BurstDuration),
+			fmt.Sprint(proc.ExitTime),
+		}
+
+		totalTurnaround += float64(proc.TotalWait) + float64(processes[i].BurstDuration) // get total turnaround time
+		totalWait += float64(proc.TotalWait)
+	}
+	count := float64(len(processes))
+	aveWait := totalWait / count
+	aveTurnaround := totalTurnaround / count
+	aveThroughput := count / float64(time-1) //final time will be one less than counted time
+
+	outputTitle(w, title)
+	outputGantt(w, gantt)
+	outputSchedule(w, schedule, aveWait, aveTurnaround, aveThroughput)
+}
 
 //endregion
 
