@@ -256,7 +256,7 @@ func SJFSchedule(w io.Writer, title string, processes []Process) {
 				} else if index == current { // if the process is currently being worked on
 					TempProcesses[index].BurstDuration--
 					if TempProcesses[index].BurstDuration == 0 {
-						fmt.Printf("%d finished: Swapped Triggered\n",index+1)
+						
 						swapped = true
 						pd[index].ExitTime = time
 					}
@@ -265,40 +265,40 @@ func SJFSchedule(w io.Writer, title string, processes []Process) {
 		}
 		new := 0
 		for index, proc := range processes {
-			if(proc.ArrivalTime >= time && pd[index].ExitTime == 0){ 
-				if(pd[new].ExitTime != 0){
-					new = index
-					swapped = true
-				} else if(TempProcesses[index].BurstDuration < TempProcesses[new].BurstDuration){
-					new = index
-				swapped = true
-				}
-				
-			}
-
-
-			// if pd[index].ExitTime == 0 && proc.ArrivalTime <= time { // if the process is not already finished, and it has arrived
-			// 	if TempProcesses[index].BurstDuration < TempProcesses[current].BurstDuration || TempProcesses[current].BurstDuration < 1 { // if the process at the index has a shorter burst time than the currently running one, or the current is finished
-			// 		if(swapped || index == new){
-			// 			if(TempProcesses[index].BurstDuration < TempProcesses[new].BurstDuration && TempProcesses[index].BurstDuration > 0){
-						
-			// 				fmt.Printf("%d going to %d\n",new+1,index+1)
-			// 				new = index
-			// 			}
-			// 		}else	{
-			// 			fmt.Printf("%d direct going to %d\n",new+1,index+1)
-			// 			new = index
-			// 		swapped = true
-			// 		}
-			// 		// 	fmt.Printf("%d new going to %d\n",new+1,index+1)
-			// 		// 	new = index
-			// 		// swapped = true
-			// 		// }
-
+			// if(proc.ArrivalTime >= time && pd[index].ExitTime == 0 && new != index){ 
+			// 	if(pd[new].ExitTime != 0){
 			// 		new = index
 			// 		swapped = true
+			// 	} else if(TempProcesses[index].BurstDuration < TempProcesses[new].BurstDuration){
+			// 		new = index
+			// 	swapped = true
 			// 	}
+				
 			// }
+
+
+			if pd[index].ExitTime == 0 && proc.ArrivalTime <= time { // if the process is not already finished, and it has arrived
+				if TempProcesses[index].BurstDuration < TempProcesses[current].BurstDuration || TempProcesses[current].BurstDuration < 1 { // if the process at the index has a shorter burst time than the currently running one, or the current is finished
+					if(swapped || index == new){
+						if(TempProcesses[index].BurstDuration < TempProcesses[new].BurstDuration && TempProcesses[index].BurstDuration > 0){
+						
+
+							new = index
+						}
+					}else	{
+						
+						new = index
+					swapped = true
+					}
+					// 	fmt.Printf("%d new going to %d\n",new+1,index+1)
+					// 	new = index
+					// swapped = true
+					// }
+
+					new = index
+					swapped = true
+				}
+			}
 		}
 		if swapped { // if the current process has lost priority or the last one is done
 			gantt = append(gantt, TimeSlice{ // place previous process in gantt table before switching processes
@@ -306,7 +306,7 @@ func SJFSchedule(w io.Writer, title string, processes []Process) {
 				Start: start,
 				Stop:  time,
 			})
-			fmt.Printf("%d slice to %d\n",current+1,new+1)
+			
 			current = new // set the the process to be currently working
 			start = time  // set the time
 		}
